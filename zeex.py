@@ -278,7 +278,11 @@ def print_usage():
     sys.stderr.write(
 """
 Usage:
-  buzz action args
+  python3 zeex.py action args
+            OR
+  python3 -m zeex action args
+
+(Depending on where zeex is installed.)
   
 Actions
 -------
