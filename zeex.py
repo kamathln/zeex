@@ -28,6 +28,8 @@ lines at a time through stdin, but treats eachh line as seperate and
 generates reverse code for each line
 
 """
+
+"""
 ZEEX:
 Zeex is both an experimental container file format and a corresponding python class for chunked lzma compression that allows to seek quickly in the compressed file.
 The file format is Write Once Read Many. The compressor takes the given input data, breaks it into blocks(or chunks) of known size, compresses each chunk seperately, and writes out the position index of each block in the data (after header).
