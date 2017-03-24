@@ -241,7 +241,7 @@ class ZeexFileReader(object):
 
             data_to_ret = data_to_ret + block_data[offset:offset+section_size]
         if len(data_to_ret) != size:
-            raise  ZeexOutOfBoundExceptions("Requested offset out of file bounds", {'offset':offset+section_size, 'section_size':1})
+            raise  ZeexOutOfBoundExceptions("Requested offset out of file bounds. Expected size: {}, Got size: {} ".format(size, len(data_to_ret)), {'offset':offset+section_size, 'section_size':1})
                 
         self._pos += size
         #sys.stderr.write("Pos after read %d\n" % self._pos)
@@ -251,14 +251,18 @@ class ZeexFileReader(object):
         #sys.stderr.write("Getting sections for Pos: %d, Size: %d\n" % (pos,size))
         tpos = pos
         sections=[]
+        total = 0
         while tpos < (pos+size):
             #sys.stderr.write("tpos at %d\n" % tpos)
             block = tpos / self.header.block_size
             offset = tpos % self.header.block_size
             section_size = self.header.block_size - offset
-            if section_size > size:
-                section_size = size
-            tpos = (block* self.header.block_size) + offset + section_size + 1
+            
+            if total+section_size > size:
+                section_size = size - (total)
+            total += section_size
+            
+            tpos = (block * self.header.block_size) + offset + section_size + 1
             sections.append( (block, offset, section_size,) )
         return sections
 
