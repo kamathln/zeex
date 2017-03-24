@@ -3,6 +3,8 @@
 ## Description
 *Chunked lzma compression, with offset index. Quickly seekable. WORM. Non-streamable. Python Implementation*
 
+**Alpha quality DO NOT use in production yet** This has been published more to present the idea. It must be somewhat usable now, but edge cases might not be posished off.
+
 Zeex is both an experimental container file format and a corresponding python class for chunked lzma compression that allows to seek quickly in the compressed file.
 
 The file format is *Write Once Read Many*. The compressor takes the given input data, breaks it into blocks(or chunks) of known size, compresses each chunk seperately, and writes out the position index of each block in the data (after header).
