@@ -13,7 +13,7 @@ The classes help in writing and reading the compressed files. They roughly follo
 
 The library can also be called directly 
 
-## Usage:
+## Usage on command line:
   python3 zeex.py action args
   python3 -m zeex action args
   
@@ -34,4 +34,34 @@ The library can also be called directly
 
 -  x infile start_offset end_offset
 
+## Usage in a program
 
+### Writer example
+```python
+import zeex
+....somecode....
+zwriter = zeex.ZeexFileWriter("largefile.zeex")
+....somecode....
+data = somecodethatmakesdata()
+zwriter.write(data)  # pushes the data into the compression queue.
+while somecond:
+  ....somecode that results in gbs of data in total....
+  data = gensomedata(x,z,y) 
+  zwriter.write(data)   # pushes some more data into the compression queue
+
+#extremely important:
+zwriter.close()
+```
+
+### Reader example
+```python
+import zeex
+....somecode....
+zreader = zeex.ZeexFileReader("largefile.zeex")
+print("Compressed file size {}".format(zreader.header.cdata_length))  #size of the data after compression excluding header and index
+print("Original file size {}".format(zreader.header.data_length)) # The size of the original file
+
+zreader.seek(100 * 1024 * 1024)   # move to 100 mega byte'th byte 
+print(zreader.tell())  #ensure in current position
+data = zreader.read(1024 * 1024)  # get 1 MB of data  
+```
