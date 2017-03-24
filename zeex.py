@@ -21,14 +21,6 @@
 #OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE
 #OR OTHER DEALINGS IN THE SOFTWARE.
 
-"""Generates the "undo" code of basic Notation of Rubik's cube scramble code
-Generates the "undo" code of basic Notation of Rubik's cube scramble code, 
-one line at a time. When running it on command line, accepts code multiple 
-lines at a time through stdin, but treats eachh line as seperate and 
-generates reverse code for each line
-
-"""
-
 """
 ZEEX:
 Zeex is both an experimental container file format and a corresponding python class for chunked lzma compression that allows to seek quickly in the compressed file.
