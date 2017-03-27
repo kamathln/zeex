@@ -44,6 +44,14 @@ except ImportError:
     import lzma
 import ctypes
 import sys
+import math
+
+
+try:
+    buffer
+    USEBUFFER=True
+except NameError:
+    USEBUFFER=False
 
 #FILE:
 
@@ -63,7 +71,8 @@ Index  (Comes After Data
             pointer to next block (64bit int)
 
 """
-ZEEXMAGIC = 'ZEEX'
+ZEEXMAGIC = b'ZEEX'
+ZEEXUNFINISHEDMAGIC = b'ZZXX'
 ZEEXVERSION = 1
 'Format version. (Not necessarily the version of code.)'
 
@@ -120,14 +129,17 @@ class ZeexFileWriter(object):
         self._outfilename = outfilename
         self.in_block_size = in_block_size
         self._header = ZeexHeader()
-        self._header.magic = 'ZEEX'
-        self._header.version = 1
+        self._header.magic = ZEEXUNFINISHEDMAGIC
+        self._header.version = ZEEXVERSION
 
-        self._outfile = open(self._outfilename, 'w')
-        self._outfile.write(buffer(self._header)[:]) # Placeholder .. we will overwrite it in the "finish" function
+        self._outfile = open(self._outfilename, 'wb')
+        if USEBUFFER:
+            self._outfile.write(buffer(self._header)[:]) # (Python2) Placeholder .. we will overwrite it in the "finish" function
+        else:
+            self._outfile.write(self._header)   #  (Python3)
         
         self._last_out_pos = 0
-        self._queue = ''
+        self._queue = b''
     
     def write(self,data):
         """Feeds Data to the compressor. The data buffer will not be compressed till either it reaches the block size or the "close" funciton is called on the writer object.
@@ -153,17 +165,28 @@ class ZeexFileWriter(object):
         self._outfile.write(compressed) 
         
         size = ((len(self._index)-1) * self.in_block_size ) + len(self._queue)
+        self._header.magic = b'ZEEX'
         self._header.block_size = self.in_block_size
         self._header.data_length = size
         self._header.cdata_length = len(compressed) + self._last_out_pos
 
-        self._outfile.write(buffer(ctypes.c_uint32(len(self._index)))[:])
+        if USEBUFFER:
+            self._outfile.write(buffer(ctypes.c_uint32(len(self._index)))[:])
+        else:
+            self._outfile.write(ctypes.c_uint32(len(self._index)))
         #sys.stderr.write("Index: \n")
         for idx, i in enumerate(self._index):
             #sys.stderr.write("\t %d: %d\n"% (idx,i))
-            self._outfile.write(buffer(ctypes.c_uint64(i))[:])
+            if USEBUFFER:
+                self._outfile.write(buffer(ctypes.c_uint64(i))[:])
+            else:
+                self._outfile.write(ctypes.c_uint64(i))
         self._outfile.seek(0)
-        self._outfile.write(buffer(self._header)[:])
+        if USEBUFFER:
+            self._outfile.write(buffer(self._header)[:])
+        else:
+            self._outfile.write(self._header)
+            
         self._outfile.close()
 
 
@@ -173,7 +196,8 @@ class ZeexFileReader(object):
     WARNING: These methods are made to resemble File class methods only for convenience. THey may not behave intricately like one.
     """
     def __init__(self,filename):
-        self._infile = open(filename)
+        self._infile = open(filename,'rb')
+
         self.header = ZeexHeader()
         self.headersize = ctypes.sizeof(self.header)
         self._infile.readinto(self.header)
@@ -184,6 +208,8 @@ class ZeexFileReader(object):
         #                 self.header.data_length,
         #                 self.header.cdata_length))
 
+        if self.header.magic == ZEEXUNFINISHEDMAGIC:
+            raise Exception("Unfinished compression")
 
         if self.header.magic != ZEEXMAGIC:
             raise Exception("Unknown file type")
@@ -220,7 +246,7 @@ class ZeexFileReader(object):
             raise Exception("unknown size")
             #pos_begin = self._pos
             #pos_end = self.header.data_length
-        data_to_ret=''
+        data_to_ret=b''
         sections = self._get_sections(self._pos, size)
         #sys.stderr.write("in read() _pos %d, size: %d\n" % (self._pos, size))
         #
@@ -246,9 +272,9 @@ class ZeexFileReader(object):
         total = 0
         while tpos < (pos+size):
             #sys.stderr.write("tpos at %d\n" % tpos)
-            block = tpos / self.header.block_size
-            offset = tpos % self.header.block_size
-            section_size = self.header.block_size - offset
+            block = int(math.floor(tpos / self.header.block_size))
+            offset = int(math.floor(tpos % self.header.block_size))
+            section_size = int(self.header.block_size - offset)
             
             if total+section_size > size:
                 section_size = size - (total)
@@ -265,6 +291,7 @@ class ZeexFileReader(object):
         if not (block < len(self._index)):
             raise ZeexOutOfBoundExceptions("Requested block not in file", block)
 
+        sys.stderr.write('Block: {}'.format(block))
         offset = self._index[block] + self.headersize
         
         if (block + 1) < len(self._index):
@@ -338,7 +365,10 @@ if __name__ == '__main__':
     
     if sys.argv[1] == 'c':
         #sys.stderr.write("Compressing File")
-        f = open(sys.argv[2])
+        if sys.argv[2] == '-':
+            f = sys.stdin.buffer
+        else:
+            f = open(sys.argv[2],'rb')
         bw = ZeexFileWriter(sys.argv[3])
         while True:
             data = f.read(bw.in_block_size)
@@ -368,7 +398,7 @@ if __name__ == '__main__':
                 print_usage()
                 sys.exit(1)
             if len(sys.argv) == 4:
-                outfile = open(sys.argv[3],'w')
+                outfile = open(sys.argv[3],'wb')
 
         br.seek(start)
         total = 0
